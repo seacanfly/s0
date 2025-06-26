@@ -1,0 +1,52 @@
+name: Python Homework Autograder
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  grading:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH  # 添加uv到PATH
+
+      - name: Create virtualenv and add to PATH
+        run: |
+          uv venv
+          echo "$(pwd)/.venv/bin" >> $GITHUB_PATH  # 关键优化：永久添加虚拟环境到PATH
+
+      - name: Install dependencies
+        run: uv sync  # 直接使用uv，无需激活
+        
+      - name: Install so
+        run: uv pip install -e . 
+        
+      - name: Run pytest for functional correctness
+        run: pytest tests/test_main.py  # 直接调用命令
+
+      - name: Run type checks with mypy
+        run: mypy src/s0c0/main.py
+
+      - name: Check formatting with black
+        run: black --check src/
+
+      - name: Run custom AST checks
+        run: python scripts/ast_check.py
+
+      - name: Run output format tests
+        run: python scripts/output_format_test.py
+
+      - name: (Optional) Compute score
+        run: python scripts/compute_score.py
